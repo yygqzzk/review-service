@@ -1,0 +1,16 @@
+server:
+  http:
+    addr: 0.0.0.0:${HTTP_PORT:8000}
+    timeout: 1s
+  grpc:
+    addr: 0.0.0.0:${GRPC_PORT:9000}
+    timeout: 1s
+data:
+  database:
+    driver: mysql
+    source: root:${MYSQL_PASSWORD:root}@tcp(127.0.0.1:3307)/review?charset=utf8mb4&parseTime=True&loc=Local
+  redis:
+    addr: 127.0.0.1:6379
+    read_timeout: 0.2s
+    write_timeout: 0.2s
+    password: ${REDIS_PASSWORD:zzk123..}

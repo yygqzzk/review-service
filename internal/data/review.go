@@ -25,3 +25,7 @@ func NewReviewRepo(data *Data, logger log.Logger) biz.ReviewRepo {
 func (r *reviewRepo) SaveReview(ctx context.Context, g *model.ReviewInfo) error {
 	return r.data.dbClient.ReviewInfo.WithContext(ctx).Create(g)
 }
+
+func (r *reviewRepo) GetReviewByOrderID(ctx context.Context, orderID int64) ([]*model.ReviewInfo, error) {
+	return r.data.dbClient.ReviewInfo.WithContext(ctx).Where(r.data.dbClient.ReviewInfo.OrderID.Eq(orderID)).Find()
+}

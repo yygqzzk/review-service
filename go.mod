@@ -5,6 +5,8 @@ go 1.23.0
 toolchain go1.24.3
 
 require (
+	github.com/bwmarrin/snowflake v0.3.0
+	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/go-kratos/kratos/contrib/log/zap/v2 v2.0.0-20250716060240-ac92cbe5701c
 	github.com/go-kratos/kratos/v2 v2.8.4
 	github.com/google/wire v0.6.0

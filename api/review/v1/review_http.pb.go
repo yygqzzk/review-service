@@ -22,7 +22,7 @@ const _ = http.SupportPackageIsVersion1
 const OperationReviewCreateReview = "/api.review.v1.Review/CreateReview"
 
 type ReviewHTTPServer interface {
-	CreateReview(context.Context, *CreateReviewRequest) (*CreateReviewReply, error)
+	CreateReview(context.Context, *CreateReviewReq) (*CreateReviewRsp, error)
 }
 
 func RegisterReviewHTTPServer(s *http.Server, srv ReviewHTTPServer) {
@@ -32,7 +32,7 @@ func RegisterReviewHTTPServer(s *http.Server, srv ReviewHTTPServer) {
 
 func _Review_CreateReview0_HTTP_Handler(srv ReviewHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in CreateReviewRequest
+		var in CreateReviewReq
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
@@ -41,19 +41,19 @@ func _Review_CreateReview0_HTTP_Handler(srv ReviewHTTPServer) func(ctx http.Cont
 		}
 		http.SetOperation(ctx, OperationReviewCreateReview)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.CreateReview(ctx, req.(*CreateReviewRequest))
+			return srv.CreateReview(ctx, req.(*CreateReviewReq))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
 			return err
 		}
-		reply := out.(*CreateReviewReply)
+		reply := out.(*CreateReviewRsp)
 		return ctx.Result(200, reply)
 	}
 }
 
 type ReviewHTTPClient interface {
-	CreateReview(ctx context.Context, req *CreateReviewRequest, opts ...http.CallOption) (rsp *CreateReviewReply, err error)
+	CreateReview(ctx context.Context, req *CreateReviewReq, opts ...http.CallOption) (rsp *CreateReviewRsp, err error)
 }
 
 type ReviewHTTPClientImpl struct {
@@ -64,8 +64,8 @@ func NewReviewHTTPClient(client *http.Client) ReviewHTTPClient {
 	return &ReviewHTTPClientImpl{client}
 }
 
-func (c *ReviewHTTPClientImpl) CreateReview(ctx context.Context, in *CreateReviewRequest, opts ...http.CallOption) (*CreateReviewReply, error) {
-	var out CreateReviewReply
+func (c *ReviewHTTPClientImpl) CreateReview(ctx context.Context, in *CreateReviewReq, opts ...http.CallOption) (*CreateReviewRsp, error) {
+	var out CreateReviewRsp
 	pattern := "/v1/review"
 	path := binding.EncodeURL(pattern, in, false)
 	opts = append(opts, http.Operation(OperationReviewCreateReview))

@@ -21,10 +21,9 @@ func NewReviewService(uc *biz.ReviewUsecase, logger log.Logger) *ReviewService {
 	return &ReviewService{uc: uc, log: log.NewHelper(logger)}
 }
 
-func (s *ReviewService) CreateReview(ctx context.Context, req *pb.CreateReviewRequest) (*pb.CreateReviewReply, error) {
+func (s *ReviewService) CreateReview(ctx context.Context, req *pb.CreateReviewReq) (*pb.CreateReviewRsp, error) {
 	s.log.WithContext(ctx).Debugf("[service] CreateReview: %v \n", req)
-	// 调用biz层创建评价
-	s.uc.CreateReview(ctx, &model.ReviewInfo{
+	review := &model.ReviewInfo{
 		UserID:       req.UserId,
 		OrderID:      req.OrderId,
 		Score:        req.Score,
@@ -34,7 +33,14 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *pb.CreateReviewRe
 		PicInfo:      req.PicInfo,
 		VideoInfo:    req.VideoInfo,
 		Anonymous:    cast.ToInt32(req.Anonymous),
-	})
+	}
+	// 调用biz层创建评价
+	if err := s.uc.CreateReview(ctx, review); err != nil {
+		return nil, err
+	}
+
 	// 拼装返回值
-	return &pb.CreateReviewReply{}, nil
+	return &pb.CreateReviewRsp{
+		ReviewId: review.ReviewID,
+	}, nil
 }

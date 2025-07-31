@@ -34,7 +34,7 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/api.review.v1.CreateReviewRequest'
+                            $ref: '#/components/schemas/api.review.v1.CreateReviewReq'
                 required: true
             responses:
                 "200":
@@ -42,14 +42,10 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/api.review.v1.CreateReviewReply'
+                                $ref: '#/components/schemas/api.review.v1.CreateReviewRsp'
 components:
     schemas:
-        api.review.v1.CreateReviewReply:
-            type: object
-            properties: {}
-            description: 创建评价响应
-        api.review.v1.CreateReviewRequest:
+        api.review.v1.CreateReviewReq:
             type: object
             properties:
                 userId:
@@ -76,6 +72,12 @@ components:
                 anonymous:
                     type: boolean
             description: 创建评价请求
+        api.review.v1.CreateReviewRsp:
+            type: object
+            properties:
+                reviewId:
+                    type: string
+            description: 创建评价响应
         helloworld.v1.HelloReply:
             type: object
             properties:

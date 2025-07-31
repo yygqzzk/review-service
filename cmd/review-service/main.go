@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/yygqzzk/review-service/internal/conf"
+	"github.com/yygqzzk/review-service/pkg/snowflake"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -54,11 +55,11 @@ func main() {
 	flag.Parse()
 
 	// 初始化日志
-	f, err := os.OpenFile("review-service.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		panic(err)
-	}
-	writeSyncer := zapcore.AddSync(f)
+	// f, err := os.OpenFile("review-service.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	writeSyncer := zapcore.AddSync(os.Stdout)
 
 	encoder := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
 	core := zapcore.NewCore(encoder, writeSyncer, zapcore.DebugLevel)
@@ -97,6 +98,12 @@ func main() {
 		panic(err)
 	}
 	defer cleanup()
+
+	// 初始化雪花算法
+	err = snowflake.Init(bc.Snowflake.StartTime, bc.Snowflake.MachineId)
+	if err != nil {
+		panic(err)
+	}
 
 	// start and wait for stop signal
 	if err := app.Run(); err != nil {

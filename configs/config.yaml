@@ -14,3 +14,6 @@ data:
     read_timeout: 0.2s
     write_timeout: 0.2s
     password: ${REDIS_PASSWORD:zzk123..}
+snowflake:
+  start_time: "2025-01-01"
+  machine_id: 1

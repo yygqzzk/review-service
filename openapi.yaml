@@ -29,6 +29,7 @@ paths:
         post:
             tags:
                 - Review
+            description: 创建评价接口
             operationId: Review_CreateReview
             requestBody:
                 content:
@@ -43,6 +44,25 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/api.review.v1.CreateReviewRsp'
+    /v1/review/reply:
+        post:
+            tags:
+                - Review
+            description: B端回复评价接口
+            operationId: Review_ReplyReview
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/api.review.v1.ReplyReviewReq'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api.review.v1.ReplyReviewRsp'
 components:
     schemas:
         api.review.v1.CreateReviewReq:
@@ -78,6 +98,26 @@ components:
                 reviewId:
                     type: string
             description: 创建评价响应
+        api.review.v1.ReplyReviewReq:
+            type: object
+            properties:
+                reviewId:
+                    type: string
+                storeId:
+                    type: string
+                content:
+                    type: string
+                picInfo:
+                    type: string
+                videoInfo:
+                    type: string
+            description: 回复评价请求
+        api.review.v1.ReplyReviewRsp:
+            type: object
+            properties:
+                replyId:
+                    type: string
+            description: 回复评价响应
         helloworld.v1.HelloReply:
             type: object
             properties:

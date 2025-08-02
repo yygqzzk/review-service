@@ -10,6 +10,7 @@ require (
 	github.com/go-kratos/kratos/contrib/log/zap/v2 v2.0.0-20250716060240-ac92cbe5701c
 	github.com/go-kratos/kratos/v2 v2.8.4
 	github.com/google/wire v0.6.0
+	github.com/panjf2000/ants/v2 v2.11.3
 	github.com/spf13/cast v1.9.2
 	go.uber.org/automaxprocs v1.5.1
 	go.uber.org/zap v1.27.0

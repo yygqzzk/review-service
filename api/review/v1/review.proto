@@ -11,9 +11,18 @@ option java_package = "api.review.v1";
 
 // 定义评价服务
 service Review {
+	// 创建评价接口
 	rpc CreateReview (CreateReviewReq) returns (CreateReviewRsp) {
 		option (google.api.http) = {
 			post: "/v1/review",
+			body: "*"
+		};
+	};
+
+	// B端回复评价接口
+	rpc ReplyReview (ReplyReviewReq) returns (ReplyReviewRsp) {
+		option (google.api.http) = {
+			post: "/v1/review/reply",
 			body: "*"
 		};
 	};
@@ -37,4 +46,18 @@ message CreateReviewReq {
 // 创建评价响应
 message CreateReviewRsp {
 	int64 reviewId = 1;	// 评价ID
+}
+
+// 回复评价请求
+message ReplyReviewReq {
+	int64 reviewId = 1 [(validate.rules).int64 = {gt: 0}];	// 评价ID
+	int64 storeId = 2 [(validate.rules).int64 = {gt: 0}];	// 商家ID
+	string content = 3 [(validate.rules).string = {min_len: 2, max_len: 255}];	// 回复内容
+	string picInfo = 4;	// 回复图片
+	string videoInfo = 5;	// 回复视频
+}
+
+// 回复评价响应
+message ReplyReviewRsp {
+	int64 replyId = 1;	// 回复评价ID
 }

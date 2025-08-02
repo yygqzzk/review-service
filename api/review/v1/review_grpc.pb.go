@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Review_CreateReview_FullMethodName = "/api.review.v1.Review/CreateReview"
+	Review_ReplyReview_FullMethodName  = "/api.review.v1.Review/ReplyReview"
 )
 
 // ReviewClient is the client API for Review service.
@@ -28,7 +29,10 @@ const (
 //
 // 定义评价服务
 type ReviewClient interface {
+	// 创建评价接口
 	CreateReview(ctx context.Context, in *CreateReviewReq, opts ...grpc.CallOption) (*CreateReviewRsp, error)
+	// B端回复评价接口
+	ReplyReview(ctx context.Context, in *ReplyReviewReq, opts ...grpc.CallOption) (*ReplyReviewRsp, error)
 }
 
 type reviewClient struct {
@@ -49,13 +53,26 @@ func (c *reviewClient) CreateReview(ctx context.Context, in *CreateReviewReq, op
 	return out, nil
 }
 
+func (c *reviewClient) ReplyReview(ctx context.Context, in *ReplyReviewReq, opts ...grpc.CallOption) (*ReplyReviewRsp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReplyReviewRsp)
+	err := c.cc.Invoke(ctx, Review_ReplyReview_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ReviewServer is the server API for Review service.
 // All implementations must embed UnimplementedReviewServer
 // for forward compatibility.
 //
 // 定义评价服务
 type ReviewServer interface {
+	// 创建评价接口
 	CreateReview(context.Context, *CreateReviewReq) (*CreateReviewRsp, error)
+	// B端回复评价接口
+	ReplyReview(context.Context, *ReplyReviewReq) (*ReplyReviewRsp, error)
 	mustEmbedUnimplementedReviewServer()
 }
 
@@ -68,6 +85,9 @@ type UnimplementedReviewServer struct{}
 
 func (UnimplementedReviewServer) CreateReview(context.Context, *CreateReviewReq) (*CreateReviewRsp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateReview not implemented")
+}
+func (UnimplementedReviewServer) ReplyReview(context.Context, *ReplyReviewReq) (*ReplyReviewRsp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReplyReview not implemented")
 }
 func (UnimplementedReviewServer) mustEmbedUnimplementedReviewServer() {}
 func (UnimplementedReviewServer) testEmbeddedByValue()                {}
@@ -108,6 +128,24 @@ func _Review_CreateReview_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Review_ReplyReview_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplyReviewReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ReviewServer).ReplyReview(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Review_ReplyReview_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ReviewServer).ReplyReview(ctx, req.(*ReplyReviewReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Review_ServiceDesc is the grpc.ServiceDesc for Review service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -118,6 +156,10 @@ var Review_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateReview",
 			Handler:    _Review_CreateReview_Handler,
+		},
+		{
+			MethodName: "ReplyReview",
+			Handler:    _Review_ReplyReview_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -5,13 +5,16 @@ import (
 
 	"github.com/go-kratos/kratos/v2/log"
 	pb "github.com/yygqzzk/review-service/api/review/v1"
-	"github.com/yygqzzk/review-service/internal/data/model"
 	"github.com/yygqzzk/review-service/pkg/snowflake"
 )
 
 type ReviewRepo interface {
-	SaveReview(context.Context, *model.ReviewInfo) error
-	GetReviewByOrderID(context.Context, int64) ([]*model.ReviewInfo, error)
+	SaveReview(ctx context.Context, review *ReviewEntity) error
+	GetReviewByOrderID(ctx context.Context, orderId int64) (*ReviewEntity, error)
+	SaveReplyWithTransaction(ctx context.Context, reply *ReplyEntity) error
+
+	GetReviewById(ctx context.Context, reviewId int64) (*ReviewEntity, error)
+	UpdateReviewReplyStatus(ctx context.Context, reviewId int64, status int32) error
 }
 
 type ReviewUsecase struct {
@@ -25,7 +28,7 @@ func NewReviewUsecase(repo ReviewRepo, logger log.Logger) *ReviewUsecase {
 
 // 实现主要业务逻辑
 // 创建评价
-func (uc *ReviewUsecase) CreateReview(ctx context.Context, r *model.ReviewInfo) error {
+func (uc *ReviewUsecase) CreateReview(ctx context.Context, r *ReviewEntity) error {
 	uc.log.WithContext(ctx).Debugf("[biz] CreateReview: %v \n", r)
 	// 1. 数据校验
 	// 1.1 参数校验 （不应该在biz层实现）
@@ -35,7 +38,7 @@ func (uc *ReviewUsecase) CreateReview(ctx context.Context, r *model.ReviewInfo) 
 		uc.log.WithContext(ctx).Errorf("[biz] GetReviewByOrderID: %v \n", err)
 		return pb.ErrorReviewInternalError("数据库查询失败")
 	}
-	if len(review) > 0 {
+	if review != nil {
 		uc.log.WithContext(ctx).Errorf("[biz] 订单: %d 已存在评价", r.OrderID)
 		return pb.ErrorReviewAlreadyExists("订单已存在评价")
 	}
@@ -48,5 +51,43 @@ func (uc *ReviewUsecase) CreateReview(ctx context.Context, r *model.ReviewInfo) 
 		uc.log.WithContext(ctx).Errorf("[biz] SaveReview: %v \n", err)
 		return pb.ErrorReviewInternalError("创建评价失败")
 	}
+	return nil
+}
+
+func (uc *ReviewUsecase) CreateReply(ctx context.Context, r *ReplyEntity) error {
+	uc.log.WithContext(ctx).Debugf("[biz] CreateReply: %v \n", r)
+
+	// 业务校验
+	// 数据合法性校验 (已回复的评价不允许商家再次回复)
+	// 同时进行 水平越权校验 (商家不能回复其他商家的评价)
+	review, err := uc.repo.GetReviewById(ctx, r.ReviewID)
+	if err != nil {
+		uc.log.WithContext(ctx).Errorf("[biz] GetReplyByReviewId: %v \n", err)
+		return pb.ErrorReviewInternalError("查询回复失败")
+	}
+	if review.HasReply == REVIEW_HAS_REPLY {
+		uc.log.WithContext(ctx).Errorf("[biz] 评价: %d 已存在回复", r.ReviewID)
+	}
+	if r.StoreID != review.StoreID {
+		uc.log.WithContext(ctx).Errorf("[biz] 商家: %d 不能回复其他商家的评价", r.StoreID)
+		return pb.ErrorReviewInternalError("水平越权")
+	}
+	// 水平越权校验(商家不能回复其他商家的评价)
+	// review, err := uc.repo.GetReviewById(ctx, r.ReviewID)
+	// if err != nil {
+	// 	uc.log.WithContext(ctx).Errorf("[biz] GetReviewById: %v \n", err)
+	// 	return pb.ErrorReviewInternalError("查询评价失败")
+	// }
+	// if review.UserID != r.StoreID {
+	// 	uc.log.WithContext(ctx).Errorf("[biz] 商家: %d 不能回复其他商家的评价", r.StoreID)
+	// }
+	// 事务操作
+	// 同时更新评价表及回复表
+	r.ReplyID = snowflake.GenID()
+	if err := uc.repo.SaveReplyWithTransaction(ctx, r); err != nil {
+		uc.log.WithContext(ctx).Errorf("[biz] SaveReply: %v \n", err)
+		return pb.ErrorReviewInternalError("创建回复失败")
+	}
+
 	return nil
 }

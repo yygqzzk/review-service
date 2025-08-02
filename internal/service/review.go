@@ -6,7 +6,6 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	pb "github.com/yygqzzk/review-service/api/review/v1"
 	"github.com/yygqzzk/review-service/internal/biz"
-	"github.com/yygqzzk/review-service/internal/data/model"
 
 	"github.com/spf13/cast"
 )
@@ -23,7 +22,7 @@ func NewReviewService(uc *biz.ReviewUsecase, logger log.Logger) *ReviewService {
 
 func (s *ReviewService) CreateReview(ctx context.Context, req *pb.CreateReviewReq) (*pb.CreateReviewRsp, error) {
 	s.log.WithContext(ctx).Debugf("[service] CreateReview: %v \n", req)
-	review := &model.ReviewInfo{
+	review := &biz.ReviewEntity{
 		UserID:       req.UserId,
 		OrderID:      req.OrderId,
 		Score:        req.Score,
@@ -43,4 +42,24 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *pb.CreateReviewRe
 	return &pb.CreateReviewRsp{
 		ReviewId: review.ReviewID,
 	}, nil
+}
+
+func (s *ReviewService) ReplyReview(ctx context.Context, req *pb.ReplyReviewReq) (*pb.ReplyReviewRsp, error) {
+	s.log.WithContext(ctx).Debugf("[service] ReplyReview: %v \n", req)
+
+	reply := &biz.ReplyEntity{
+		ReviewID:  req.ReviewId,
+		StoreID:   req.StoreId,
+		Content:   req.Content,
+		PicInfo:   req.PicInfo,
+		VideoInfo: req.VideoInfo,
+	}
+	if err := s.uc.CreateReply(ctx, reply); err != nil {
+		return nil, err
+	}
+
+	return &pb.ReplyReviewRsp{
+		ReplyId: reply.ReplyID,
+	}, nil
+
 }

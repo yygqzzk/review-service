@@ -6,6 +6,7 @@ import (
 	"github.com/yygqzzk/review-service/internal/biz"
 	"github.com/yygqzzk/review-service/internal/data/model"
 	"github.com/yygqzzk/review-service/internal/data/query"
+	"gorm.io/gorm/clause"
 
 	"github.com/go-kratos/kratos/v2/log"
 )
@@ -129,5 +130,51 @@ func (r *reviewRepo) GetReviewById(ctx context.Context, reviewId int64) (*biz.Re
 func (r *reviewRepo) UpdateReviewReplyStatus(ctx context.Context, reviewId int64, status int32) error {
 	_, err := r.data.dbClient.ReviewInfo.WithContext(ctx).Where(r.data.dbClient.ReviewInfo.ReviewID.Eq(reviewId)).Update(r.data.dbClient.ReviewInfo.HasReply, status)
 
+	return err
+}
+
+func (r *reviewRepo) GetAppealByReviewID(ctx context.Context, reviewId int64) (*biz.AppealEntity, error) {
+	appeal, err := r.data.dbClient.ReviewAppealInfo.WithContext(ctx).Where(r.data.dbClient.ReviewAppealInfo.ReviewID.Eq(reviewId)).First()
+	if err != nil {
+		return nil, err
+	}
+	appealEntity := &biz.AppealEntity{
+		AppealID:  appeal.AppealID,
+		ReviewID:  appeal.ReviewID,
+		StoreID:   appeal.StoreID,
+		Reason:    appeal.Reason,
+		Content:   appeal.Content,
+		PicInfo:   appeal.PicInfo,
+		VideoInfo: appeal.VideoInfo,
+		Status:    appeal.Status,
+	}
+	return appealEntity, nil
+}
+
+func (r *reviewRepo) SaveAppeal(ctx context.Context, a *biz.AppealEntity) (err error) {
+	appeal := &model.ReviewAppealInfo{
+		AppealID:  a.AppealID,
+		ReviewID:  a.ReviewID,
+		StoreID:   a.StoreID,
+		Reason:    a.Reason,
+		Content:   a.Content,
+		PicInfo:   a.PicInfo,
+		VideoInfo: a.VideoInfo,
+		Status:    10,
+	}
+	err = r.data.dbClient.ReviewAppealInfo.WithContext(ctx).Clauses(
+		clause.OnConflict{
+			Columns: []clause.Column{{Name: "review_id"}}, // 唯一索引校验
+			DoUpdates: clause.Assignments(map[string]interface{}{ // 若有冲突则执行更新操作
+				"status":     10,
+				"content":    appeal.Content,
+				"reason":     appeal.Reason,
+				"pic_info":   appeal.PicInfo,
+				"video_info": appeal.VideoInfo,
+			}),
+		},
+	).Create(appeal)
+
+	r.log.WithContext(ctx).Debugf("[data] SaveAppeal: %v \n", appeal)
 	return err
 }

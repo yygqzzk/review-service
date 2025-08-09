@@ -2,10 +2,12 @@ package biz
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-kratos/kratos/v2/log"
 	pb "github.com/yygqzzk/review-service/api/review/v1"
 	"github.com/yygqzzk/review-service/pkg/snowflake"
+	"gorm.io/gorm"
 )
 
 type ReviewRepo interface {
@@ -15,6 +17,8 @@ type ReviewRepo interface {
 
 	GetReviewById(ctx context.Context, reviewId int64) (*ReviewEntity, error)
 	UpdateReviewReplyStatus(ctx context.Context, reviewId int64, status int32) error
+	GetAppealByReviewID(ctx context.Context, reviewId int64) (*AppealEntity, error)
+	SaveAppeal(ctx context.Context, appeal *AppealEntity) error
 }
 
 type ReviewUsecase struct {
@@ -89,5 +93,41 @@ func (uc *ReviewUsecase) CreateReply(ctx context.Context, r *ReplyEntity) error 
 		return pb.ErrorReviewInternalError("创建回复失败")
 	}
 
+	return nil
+}
+
+func (uc *ReviewUsecase) SaveAppeal(ctx context.Context, a *AppealEntity) error {
+	uc.log.WithContext(ctx).Debugf("[biz] SaveAppeal: %v \n", a)
+
+	// 查询是否已有申诉
+	appeal, err := uc.repo.GetAppealByReviewID(ctx, a.ReviewID)
+	// 其他查询错误
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	// 申诉已存在
+	if appeal != nil {
+		// 水平越权校验(商家不能申诉其他商家的评价)
+		if appeal.StoreID != a.StoreID {
+			uc.log.WithContext(ctx).Errorf("[biz] 商家: %d 不能申诉其他商家的评价", a.StoreID)
+			return pb.ErrorReviewInternalError("水平越权")
+		}
+		// 申诉状态已被审核过
+		if appeal.Status > 10 {
+			return errors.New("该评价已有申诉记录")
+		}
+		// 共用申诉ID
+		a.AppealID = appeal.AppealID
+	} else {
+		// 生成新的申诉ID
+		a.AppealID = snowflake.GenID()
+	}
+
+	// 若申诉不存在，则插入申诉数据；若存在，则更新申诉
+	if err := uc.repo.SaveAppeal(ctx, a); err != nil {
+		uc.log.WithContext(ctx).Errorf("[biz] SaveAppeal: %v \n", err)
+		return pb.ErrorReviewInternalError("申诉失败")
+	}
 	return nil
 }

@@ -20,6 +20,7 @@ func NewReviewService(uc *biz.ReviewUsecase, logger log.Logger) *ReviewService {
 	return &ReviewService{uc: uc, log: log.NewHelper(logger)}
 }
 
+// 创建评价接口
 func (s *ReviewService) CreateReview(ctx context.Context, req *pb.CreateReviewReq) (*pb.CreateReviewRsp, error) {
 	s.log.WithContext(ctx).Debugf("[service] CreateReview: %v \n", req)
 	review := &biz.ReviewEntity{
@@ -44,6 +45,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *pb.CreateReviewRe
 	}, nil
 }
 
+// B端回复评价接口
 func (s *ReviewService) ReplyReview(ctx context.Context, req *pb.ReplyReviewReq) (*pb.ReplyReviewRsp, error) {
 	s.log.WithContext(ctx).Debugf("[service] ReplyReview: %v \n", req)
 
@@ -62,4 +64,43 @@ func (s *ReviewService) ReplyReview(ctx context.Context, req *pb.ReplyReviewReq)
 		ReplyId: reply.ReplyID,
 	}, nil
 
+}
+
+// C端获取评价详情
+func (s *ReviewService) GetReview(ctx context.Context, req *pb.GetReviewReq) (*pb.GetReviewRsp, error) {
+	return nil, nil
+}
+
+// C端查看userID下所有评价
+func (s *ReviewService) ListReviewByUserID(context.Context, *pb.ListReviewByUserIDReq) (*pb.ListReviewByUserIDRsp, error) {
+	return nil, nil
+}
+
+// B端申诉评价
+func (s *ReviewService) AppealReview(ctx context.Context, req *pb.AppealReviewReq) (rsp *pb.AppealReviewRsp, err error) {
+	s.log.WithContext(ctx).Debugf("[service] AppealReview: %v \n", req)
+	appeal := &biz.AppealEntity{
+		StoreID:   req.StoreID,
+		Reason:    req.Reason,
+		Content:   req.Content,
+		PicInfo:   req.PicInfo,
+		VideoInfo: req.VideoInfo,
+	}
+	if err = s.uc.SaveAppeal(ctx, appeal); err != nil {
+		return nil, err
+	}
+
+	return &pb.AppealReviewRsp{
+		AppealID: appeal.AppealID,
+	}, nil
+}
+
+// O端审核评价
+func (s *ReviewService) AuditReview(context.Context, *pb.AuditReviewReq) (*pb.AuditReviewRsp, error) {
+	return nil, nil
+}
+
+// O端评价申诉审核
+func (s *ReviewService) AuditAppeal(context.Context, *pb.AuditAppealReq) (*pb.AuditAppealRsp, error) {
+	return nil, nil
 }

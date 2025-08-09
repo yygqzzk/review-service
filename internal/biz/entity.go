@@ -28,3 +28,14 @@ type ReviewEntity struct {
 	Anonymous    int32  // 是否匿名
 	HasReply     int32  // 是否已回复
 }
+
+type AppealEntity struct {
+	AppealID  int64  // 申诉ID
+	ReviewID  int64  // 评价ID
+	StoreID   int64  // 商家ID
+	Reason    string // 申诉原因
+	Content   string // 申诉内容
+	PicInfo   string // 申诉图片
+	VideoInfo string // 申诉视频
+	Status    int32  // 申诉状态
+}

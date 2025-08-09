@@ -24,8 +24,9 @@ func NewReviewService(uc *biz.ReviewUsecase, logger log.Logger) *ReviewService {
 func (s *ReviewService) CreateReview(ctx context.Context, req *pb.CreateReviewReq) (*pb.CreateReviewRsp, error) {
 	s.log.WithContext(ctx).Debugf("[service] CreateReview: %v \n", req)
 	review := &biz.ReviewEntity{
-		UserID:       req.UserId,
-		OrderID:      req.OrderId,
+		UserID:       req.UserID,
+		OrderID:      req.OrderID,
+		StoreID:      req.StoreID,
 		Score:        req.Score,
 		ServiceScore: req.ServiceScore,
 		ExpressScore: req.ExpressScore,
@@ -41,7 +42,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *pb.CreateReviewRe
 
 	// 拼装返回值
 	return &pb.CreateReviewRsp{
-		ReviewId: review.ReviewID,
+		ReviewID: review.ReviewID,
 	}, nil
 }
 
@@ -50,8 +51,8 @@ func (s *ReviewService) ReplyReview(ctx context.Context, req *pb.ReplyReviewReq)
 	s.log.WithContext(ctx).Debugf("[service] ReplyReview: %v \n", req)
 
 	reply := &biz.ReplyEntity{
-		ReviewID:  req.ReviewId,
-		StoreID:   req.StoreId,
+		ReviewID:  req.ReviewID,
+		StoreID:   req.StoreID,
 		Content:   req.Content,
 		PicInfo:   req.PicInfo,
 		VideoInfo: req.VideoInfo,
@@ -61,7 +62,7 @@ func (s *ReviewService) ReplyReview(ctx context.Context, req *pb.ReplyReviewReq)
 	}
 
 	return &pb.ReplyReviewRsp{
-		ReplyId: reply.ReplyID,
+		ReplyID: reply.ReplyID,
 	}, nil
 
 }
@@ -80,6 +81,7 @@ func (s *ReviewService) ListReviewByUserID(context.Context, *pb.ListReviewByUser
 func (s *ReviewService) AppealReview(ctx context.Context, req *pb.AppealReviewReq) (rsp *pb.AppealReviewRsp, err error) {
 	s.log.WithContext(ctx).Debugf("[service] AppealReview: %v \n", req)
 	appeal := &biz.AppealEntity{
+		ReviewID:  req.ReviewID,
 		StoreID:   req.StoreID,
 		Reason:    req.Reason,
 		Content:   req.Content,
@@ -96,11 +98,40 @@ func (s *ReviewService) AppealReview(ctx context.Context, req *pb.AppealReviewRe
 }
 
 // O端审核评价
-func (s *ReviewService) AuditReview(context.Context, *pb.AuditReviewReq) (*pb.AuditReviewRsp, error) {
-	return nil, nil
+func (s *ReviewService) AuditReview(ctx context.Context, req *pb.AuditReviewReq) (rsp *pb.AuditReviewRsp, err error) {
+	s.log.WithContext(ctx).Debugf("[service] AuditReview: %v \n", req)
+
+	audit := &biz.AuditReviewEntity{
+		ReviewID:  req.ReviewID,
+		Status:    req.Status,
+		OpUser:    req.OpUser,
+		OpReason:  req.OpReason,
+		OpRemarks: *req.OpRemarks,
+	}
+
+	if err = s.uc.AuditReview(ctx, audit); err != nil {
+		return nil, err
+	}
+
+	return &pb.AuditReviewRsp{}, nil
 }
 
 // O端评价申诉审核
-func (s *ReviewService) AuditAppeal(context.Context, *pb.AuditAppealReq) (*pb.AuditAppealRsp, error) {
-	return nil, nil
+func (s *ReviewService) AuditAppeal(ctx context.Context, req *pb.AuditAppealReq) (rsp *pb.AuditAppealRsp, err error) {
+
+	s.log.WithContext(ctx).Debugf("[service] AuditAppeal: %v \n", req)
+
+	appeal := &biz.AuditAppealEntity{
+		AppealID:  req.AppealID,
+		ReviewID:  req.ReviewID,
+		Status:    req.Status,
+		OpUser:    req.OpUser,
+		OpRemarks: *req.OpRemarks,
+	}
+
+	if err = s.uc.AuditAppeal(ctx, appeal); err != nil {
+		return nil, err
+	}
+
+	return &pb.AuditAppealRsp{}, nil
 }

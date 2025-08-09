@@ -249,9 +249,9 @@ components:
         api.business.v1.ReplyReviewReq:
             type: object
             properties:
-                reviewId:
+                reviewID:
                     type: string
-                storeId:
+                storeID:
                     type: string
                 content:
                     type: string
@@ -263,7 +263,7 @@ components:
         api.business.v1.ReplyReviewRsp:
             type: object
             properties:
-                replyId:
+                replyID:
                     type: string
             description: 回复评价响应
         api.operation.v1.AuditAppealReq:
@@ -366,9 +366,11 @@ components:
         api.review.v1.CreateReviewReq:
             type: object
             properties:
-                userId:
+                userID:
                     type: string
-                orderId:
+                orderID:
+                    type: string
+                storeID:
                     type: string
                 score:
                     type: integer
@@ -385,15 +387,13 @@ components:
                     type: string
                 videoInfo:
                     type: string
-                voiceInfo:
-                    type: string
                 anonymous:
                     type: boolean
             description: 创建评价请求
         api.review.v1.CreateReviewRsp:
             type: object
             properties:
-                reviewId:
+                reviewID:
                     type: string
             description: 创建评价响应
         api.review.v1.GetReviewRsp:
@@ -413,9 +413,9 @@ components:
         api.review.v1.ReplyReviewReq:
             type: object
             properties:
-                reviewId:
+                reviewID:
                     type: string
-                storeId:
+                storeID:
                     type: string
                 content:
                     type: string
@@ -427,7 +427,7 @@ components:
         api.review.v1.ReplyReviewRsp:
             type: object
             properties:
-                replyId:
+                replyID:
                     type: string
             description: 回复评价响应
         api.review.v1.ReviewInfo:

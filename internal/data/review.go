@@ -65,7 +65,7 @@ func (r *reviewRepo) GetReviewByOrderID(ctx context.Context, orderID int64) (*bi
 	return reviewEntity, nil
 }
 
-func (r *reviewRepo) SaveReplyWithTransaction(ctx context.Context, g *biz.ReplyEntity) error {
+func (r *reviewRepo) SaveReply(ctx context.Context, g *biz.ReplyEntity) error {
 	reply := &model.ReviewReplyInfo{
 		ReplyID:   g.ReplyID,
 		ReviewID:  g.ReviewID,
@@ -124,6 +124,7 @@ func (r *reviewRepo) GetReviewById(ctx context.Context, reviewId int64) (*biz.Re
 		Anonymous:    review.Anonymous,
 		HasReply:     review.HasReply,
 	}
+	r.log.WithContext(ctx).Debugf("[data] GetReviewById: %v \n", reviewEntity)
 	return reviewEntity, nil
 }
 
@@ -177,4 +178,52 @@ func (r *reviewRepo) SaveAppeal(ctx context.Context, a *biz.AppealEntity) (err e
 
 	r.log.WithContext(ctx).Debugf("[data] SaveAppeal: %v \n", appeal)
 	return err
+}
+
+func (r *reviewRepo) UpdateReviewAuditStatus(ctx context.Context, a *biz.AuditReviewEntity) error {
+
+	ret, err := r.data.dbClient.ReviewInfo.WithContext(ctx).Where(r.data.dbClient.ReviewInfo.ReviewID.Eq(a.ReviewID)).Updates(
+		map[string]interface{}{
+			"status":     a.Status,
+			"op_user":    a.OpUser,
+			"op_reason":  a.OpReason,
+			"op_remarks": a.OpRemarks,
+		},
+	)
+	if err != nil {
+		r.log.WithContext(ctx).Errorf("[data] UpdateReviewAuditStatus: %v \n", err)
+		return err
+	}
+	r.log.WithContext(ctx).Debugf("[data] UpdateReviewAuditStatus: %v \n", ret)
+	return nil
+}
+
+func (r *reviewRepo) UpdateAppealAuditStatus(ctx context.Context, a *biz.AuditAppealEntity) error {
+	return r.data.dbClient.Transaction(func(client *query.Query) error {
+		ret, err := client.ReviewAppealInfo.WithContext(ctx).Where(
+			client.ReviewAppealInfo.AppealID.Eq(a.AppealID),
+			client.ReviewAppealInfo.ReviewID.Eq(a.ReviewID),
+		).Updates(
+			map[string]interface{}{
+				"status":     a.Status,
+				"op_user":    a.OpUser,
+				"op_remarks": a.OpRemarks,
+			},
+		)
+		if err != nil {
+			r.log.WithContext(ctx).Errorf("[data] UpdateAppealAuditStatus: %v \n", err)
+			return err
+		}
+
+		if a.Status == 20 {
+			_, err = client.ReviewInfo.WithContext(ctx).Where(client.ReviewInfo.ReviewID.Eq(a.ReviewID)).Update(client.ReviewInfo.Status, 40)
+			if err != nil {
+				r.log.WithContext(ctx).Errorf("[data] UpdateAppealAuditStatus: %v \n", err)
+				return err
+			}
+		}
+
+		r.log.WithContext(ctx).Debugf("[data] UpdateAppealAuditStatus: %v \n", ret)
+		return nil
+	})
 }

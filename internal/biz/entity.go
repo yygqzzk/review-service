@@ -39,3 +39,19 @@ type AppealEntity struct {
 	VideoInfo string // 申诉视频
 	Status    int32  // 申诉状态
 }
+
+type AuditReviewEntity struct {
+	ReviewID  int64  // 评价ID
+	Status    int32  // 审核状态
+	OpUser    string // 操作人
+	OpReason  string // 操作原因
+	OpRemarks string // 操作备注
+}
+
+type AuditAppealEntity struct {
+	AppealID  int64  // 申诉ID
+	ReviewID  int64  // 评价ID
+	Status    int32  // 审核状态
+	OpUser    string // 操作人
+	OpRemarks string // 操作备注
+}

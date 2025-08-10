@@ -2,10 +2,12 @@ package data
 
 import (
 	"context"
+	"errors"
 
 	"github.com/yygqzzk/review-service/internal/biz"
 	"github.com/yygqzzk/review-service/internal/data/model"
 	"github.com/yygqzzk/review-service/internal/data/query"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"github.com/go-kratos/kratos/v2/log"
@@ -45,9 +47,13 @@ func (r *reviewRepo) SaveReview(ctx context.Context, g *biz.ReviewEntity) error 
 func (r *reviewRepo) GetReviewByOrderID(ctx context.Context, orderID int64) (*biz.ReviewEntity, error) {
 	review, err := r.data.dbClient.ReviewInfo.WithContext(ctx).Where(r.data.dbClient.ReviewInfo.OrderID.Eq(orderID)).First()
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		r.log.WithContext(ctx).Errorf("[data] GetReviewByOrderID: %v \n", err)
 		return nil, err
 	}
+
 	reviewEntity := &biz.ReviewEntity{
 		ReviewID:     review.ReviewID,
 		UserID:       review.UserID,

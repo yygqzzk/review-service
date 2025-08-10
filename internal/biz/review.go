@@ -41,7 +41,7 @@ func (uc *ReviewUsecase) CreateReview(ctx context.Context, r *ReviewEntity) erro
 	// 1.2 业务校验
 	review, err := uc.repo.GetReviewByOrderID(ctx, r.OrderID)
 	// 其他查询错误
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil {
 		uc.log.WithContext(ctx).Errorf("[biz] GetReviewByOrderID: %v \n", err)
 		return pb.ErrorReviewInternalError("数据库查询失败")
 	}

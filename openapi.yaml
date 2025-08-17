@@ -454,12 +454,11 @@ components:
                     type: string
                 videoInfo:
                     type: string
-                status:
-                    type: integer
-                    format: int32
             description: 评价信息
 tags:
     - name: Business
+      description: B端评价服务
     - name: Operation
+      description: O端评价服务
     - name: Review
-      description: 定义评价服务
+      description: 评价服务

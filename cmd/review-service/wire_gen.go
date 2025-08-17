@@ -19,12 +19,20 @@ import (
 // Injectors from wire.go:
 
 // wireApp init kratos application.
-func wireApp(confServer *conf.Server, confData *conf.Data, registry *conf.Registry, logger log.Logger) (*kratos.App, func(), error) {
+func wireApp(confServer *conf.Server, confData *conf.Data, elasticsearch *conf.Elasticsearch, registry *conf.Registry, logger log.Logger) (*kratos.App, func(), error) {
 	db, err := data.NewDB(confData)
 	if err != nil {
 		return nil, nil, err
 	}
-	dataData, cleanup, err := data.NewData(db, logger)
+	typedClient, err := data.NewESClient(elasticsearch)
+	if err != nil {
+		return nil, nil, err
+	}
+	client, err := data.NewRedisClient(confData)
+	if err != nil {
+		return nil, nil, err
+	}
+	dataData, cleanup, err := data.NewData(db, logger, typedClient, client)
 	if err != nil {
 		return nil, nil, err
 	}

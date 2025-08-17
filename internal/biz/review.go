@@ -21,6 +21,7 @@ type ReviewRepo interface {
 	SaveAppeal(ctx context.Context, appeal *AppealEntity) error
 	UpdateReviewAuditStatus(ctx context.Context, audit *AuditReviewEntity) error
 	UpdateAppealAuditStatus(ctx context.Context, audit *AuditAppealEntity) error
+	ListReviewByStoreID(ctx context.Context, storeID int64, offset, limit int) ([]*ReviewEntity, error)
 }
 
 type ReviewUsecase struct {
@@ -164,4 +165,24 @@ func (uc *ReviewUsecase) AuditAppeal(ctx context.Context, a *AuditAppealEntity) 
 	uc.repo.UpdateAppealAuditStatus(ctx, a)
 
 	return nil
+}
+
+func (uc *ReviewUsecase) ListReviewByStoreID(ctx context.Context, storeID int64, page, size int) ([]*ReviewEntity, error) {
+	uc.log.WithContext(ctx).Debugf("[biz] ListReviewByStoreID: %d, %d, %d \n", storeID, page, size)
+	if page <= 0 {
+		page = 1
+	}
+
+	if size <= 0 || size > 50 {
+		size = 10
+	}
+	offset := (page - 1) * size
+	limit := size
+
+	reviewList, err := uc.repo.ListReviewByStoreID(ctx, storeID, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return reviewList, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/go-kratos/kratos/v2/log"
+	"github.com/samber/lo"
 	pb "github.com/yygqzzk/review-service/api/review/v1"
 	"github.com/yygqzzk/review-service/internal/biz"
 
@@ -78,7 +79,7 @@ func (s *ReviewService) ListReviewByUserID(context.Context, *pb.ListReviewByUser
 }
 
 // B端申诉评价
-func (s *ReviewService) AppealReview(ctx context.Context, req *pb.AppealReviewReq) (rsp *pb.AppealReviewRsp, err error) {
+func (s *ReviewService) AppealReview(ctx context.Context, req *pb.AppealReviewReq) (*pb.AppealReviewRsp, error) {
 	s.log.WithContext(ctx).Debugf("[service] AppealReview: %v \n", req)
 	appeal := &biz.AppealEntity{
 		ReviewID:  req.ReviewID,
@@ -88,7 +89,7 @@ func (s *ReviewService) AppealReview(ctx context.Context, req *pb.AppealReviewRe
 		PicInfo:   req.PicInfo,
 		VideoInfo: req.VideoInfo,
 	}
-	if err = s.uc.SaveAppeal(ctx, appeal); err != nil {
+	if err := s.uc.SaveAppeal(ctx, appeal); err != nil {
 		return nil, err
 	}
 
@@ -98,7 +99,7 @@ func (s *ReviewService) AppealReview(ctx context.Context, req *pb.AppealReviewRe
 }
 
 // O端审核评价
-func (s *ReviewService) AuditReview(ctx context.Context, req *pb.AuditReviewReq) (rsp *pb.AuditReviewRsp, err error) {
+func (s *ReviewService) AuditReview(ctx context.Context, req *pb.AuditReviewReq) (*pb.AuditReviewRsp, error) {
 	s.log.WithContext(ctx).Debugf("[service] AuditReview: %v \n", req)
 
 	audit := &biz.AuditReviewEntity{
@@ -109,7 +110,7 @@ func (s *ReviewService) AuditReview(ctx context.Context, req *pb.AuditReviewReq)
 		OpRemarks: *req.OpRemarks,
 	}
 
-	if err = s.uc.AuditReview(ctx, audit); err != nil {
+	if err := s.uc.AuditReview(ctx, audit); err != nil {
 		return nil, err
 	}
 
@@ -117,7 +118,7 @@ func (s *ReviewService) AuditReview(ctx context.Context, req *pb.AuditReviewReq)
 }
 
 // O端评价申诉审核
-func (s *ReviewService) AuditAppeal(ctx context.Context, req *pb.AuditAppealReq) (rsp *pb.AuditAppealRsp, err error) {
+func (s *ReviewService) AuditAppeal(ctx context.Context, req *pb.AuditAppealReq) (*pb.AuditAppealRsp, error) {
 
 	s.log.WithContext(ctx).Debugf("[service] AuditAppeal: %v \n", req)
 
@@ -129,9 +130,34 @@ func (s *ReviewService) AuditAppeal(ctx context.Context, req *pb.AuditAppealReq)
 		OpRemarks: *req.OpRemarks,
 	}
 
-	if err = s.uc.AuditAppeal(ctx, appeal); err != nil {
+	if err := s.uc.AuditAppeal(ctx, appeal); err != nil {
 		return nil, err
 	}
 
 	return &pb.AuditAppealRsp{}, nil
+}
+
+func (s *ReviewService) ListReviewByStoreID(ctx context.Context, req *pb.ListReviewByStoreIDReq) (*pb.ListReviewByStoreIDRsp, error) {
+	s.log.WithContext(ctx).Debugf("[service] ListReviewByStoreID: %v \n", req)
+	reviewList, err := s.uc.ListReviewByStoreID(ctx, req.StoreID, int(req.Page), int(req.Size))
+	if err != nil {
+		return nil, err
+	}
+	list := lo.Map(reviewList, func(item *biz.ReviewEntity, _ int) *pb.ReviewInfo {
+		return &pb.ReviewInfo{
+			ReviewID:     item.ReviewID,
+			UserID:       item.UserID,
+			OrderID:      item.OrderID,
+			Score:        item.Score,
+			ServiceScore: item.ServiceScore,
+			ExpressScore: item.ExpressScore,
+			Content:      item.Content,
+			PicInfo:      item.PicInfo,
+			VideoInfo:    item.VideoInfo,
+		}
+	})
+
+	return &pb.ListReviewByStoreIDRsp{
+		List: list,
+	}, nil
 }

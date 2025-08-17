@@ -2,11 +2,17 @@ package data
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	"github.com/redis/go-redis/v9"
 	"github.com/yygqzzk/review-service/internal/biz"
 	"github.com/yygqzzk/review-service/internal/data/model"
 	"github.com/yygqzzk/review-service/internal/data/query"
+	rds "github.com/yygqzzk/review-service/lib/redis"
+	sf "github.com/yygqzzk/review-service/lib/singleflight"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -233,3 +239,114 @@ func (r *reviewRepo) UpdateAppealAuditStatus(ctx context.Context, a *biz.AuditAp
 		return nil
 	})
 }
+
+// 利用redis缓存配合singleflight查询评价列表
+func (r *reviewRepo) ListReviewByStoreID(ctx context.Context, storeID int64, offset int, limit int) ([]*biz.ReviewEntity, error) {
+	r.log.WithContext(ctx).Debugf("[data] ListReviewByStoreID storeId: %d, offset: %d, limit: %d \n", storeID, offset, limit)
+
+	redisKey := fmt.Sprintf(rds.REVIEW_STORE_ID_OFFSET_LIMIT, storeID, offset, limit)
+	// singleflight查询
+	data, err, _ :=
+		sf.Do(ctx, func(ctx context.Context) (any, error) {
+			return r.listReviewByStoreId(ctx, storeID, offset, limit, redisKey)
+		}, redisKey)
+
+	return data.([]*biz.ReviewEntity), err
+}
+
+func (r *reviewRepo) listReviewByStoreId(ctx context.Context, storeID int64, offset int, limit int, key string) (any, error) {
+
+	data, err := rds.Get(ctx, r.data.rdb, key)
+	// redis 查询错误
+	if err != nil && !errors.Is(err, redis.Nil) {
+		r.log.WithContext(ctx).Errorf("[data] ListReviewByStoreID redis get error: %v \n", err)
+		return nil, err
+	}
+	// 缓存命中
+	if len(data) > 0 {
+		reviewList := make([]*biz.ReviewEntity, 0, limit)
+		err := json.Unmarshal(data, &reviewList)
+		if err != nil {
+			r.log.WithContext(ctx).Errorf("[data] ListReviewByStoreID redis unmarshal error: %v \n", err)
+			return nil, err
+		}
+		r.log.WithContext(ctx).Debugf("[data] ListReviewByStoreID redis key hit: %s, reviewList: %v \n", key, string(data))
+		return reviewList, nil
+	}
+	// 缓存未命中
+	r.log.WithContext(ctx).Debugf("[data] ListReviewByStoreID redis key hit miss: %s \n", key)
+	// 查询ES
+	reviewList, err := r.listReviewByStoreIdFromES(ctx, storeID, offset, limit)
+	if err != nil {
+		r.log.WithContext(ctx).Errorf("[data] ListReviewByStoreID from es error: %v \n", err)
+		return nil, err
+	}
+	// 缓存数据
+	reviewListBytes, err := json.Marshal(reviewList)
+	if err != nil {
+		r.log.WithContext(ctx).Errorf("[data] ListReviewByStoreID marshal reviewList error: %v \n", err)
+		return nil, err
+	}
+	err = rds.Set(ctx, r.data.rdb, key, reviewListBytes, 0)
+	if err != nil {
+		r.log.WithContext(ctx).Errorf("[data] ListReviewByStoreID set redis error: %v \n", err)
+		return nil, err
+	}
+	return reviewList, nil
+}
+
+// es查询评价列表
+func (r *reviewRepo) listReviewByStoreIdFromES(ctx context.Context, storeID int64, offset int, limit int) ([]*biz.ReviewEntity, error) {
+
+	// 去ES查询评价
+	resp, err := r.data.es.Search().Index("review").From(offset).Size(limit).Query(&types.Query{
+		Bool: &types.BoolQuery{
+			Filter: []types.Query{
+				{
+					Term: map[string]types.TermQuery{
+						"store_id": {
+							Value: storeID,
+						},
+					},
+				},
+			},
+		},
+	}).Do(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 反序列化数据
+	reviewList := make([]*biz.ReviewEntity, 0, resp.Hits.Total.Value)
+	for _, hit := range resp.Hits.Hits {
+		review := &biz.ReviewEntity{}
+		err := json.Unmarshal(hit.Source_, review)
+		if err != nil {
+			r.log.WithContext(ctx).Errorf("[data] ListReviewByStoreID from es, unmarshal error: %v \n", err)
+			continue
+		}
+		reviewList = append(reviewList, review)
+	}
+
+	return reviewList, nil
+}
+
+// 序列化技巧
+// type ReviewInfo struct {
+// 	*model.ReviewInfo
+// 	CreateAt Time `json:"create_at"`
+// 	UpdateAt Time `json:"update_at"`
+// }
+
+// type Time time.Time
+
+// func (t *Time) UnmarshalJSON(data []byte) error {
+// 	s := strings.Trim(string(data), "\"")
+// 	time, err := time.Parse(time.DateTime, s)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	*t = Time(time)
+// 	return nil
+// }
